@@ -1,0 +1,43 @@
+name: deploy-space
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ vars.HF_SPACE != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install huggingface_hub
+      - name: Préparer le contenu du Space
+        run: |
+          mkdir staging
+          rsync -a --exclude .git --exclude .github --exclude data --exclude models \
+            --exclude frontend/node_modules --exclude frontend/dist ./ staging/
+          cp deploy/Dockerfile.space staging/Dockerfile
+          {
+            printf -- '---\ntitle: AeroOps Intelligence\nemoji: "✈️"\ncolorFrom: blue\ncolorTo: gray\nsdk: docker\napp_port: 7860\npinned: false\nshort_description: Prédiction des retards aériens et simulation OCC\n---\n\n'
+            cat README.md
+          } > staging/README.md
+      - name: Publier sur Hugging Face
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE: ${{ vars.HF_SPACE }}
+        run: |
+          python - <<'PY'
+          import os
+          from huggingface_hub import HfApi
+          api = HfApi(token=os.environ["HF_TOKEN"])
+          space = os.environ["HF_SPACE"]
+          api.create_repo(space, repo_type="space", space_sdk="docker", exist_ok=True)
+          api.upload_folder(folder_path="staging", repo_id=space, repo_type="space",
+                            commit_message=f"Deploy {os.environ.get('GITHUB_SHA', '')[:7]}",
+                            delete_patterns=["*"])
+          print(f"https://huggingface.co/spaces/{space}")
+          PY

@@ -1,0 +1,23 @@
+# Image Hugging Face Spaces : API + front dans un seul conteneur, port 7860.
+# Les données de démo et les modèles sont générés au build -> démarrage instantané.
+FROM node:22-alpine AS front
+WORKDIR /front
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend/ ./
+RUN npm run build
+
+FROM python:3.11-slim
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 && rm -rf /var/lib/apt/lists/* \
+    && useradd -m -u 1000 user
+ENV PYTHONUNBUFFERED=1 PYTHONPATH=/app/src
+WORKDIR /app
+COPY requirements.txt .
+RUN grep -v "^-e" requirements.txt > /tmp/req.txt && pip install --no-cache-dir -r /tmp/req.txt
+COPY src/ src/
+COPY sql/ sql/
+COPY --from=front /front/dist frontend/dist
+RUN python -m aeroops.cli demo && chown -R user:user /app
+USER user
+EXPOSE 7860
+CMD ["uvicorn", "aeroops.api.main:app", "--host", "0.0.0.0", "--port", "7860"]
