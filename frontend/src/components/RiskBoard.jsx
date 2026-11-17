@@ -3,9 +3,16 @@ import { api, delayStatus, fmt } from '../api'
 
 const MODELS = [['tactical', 'Tactique (H-2)'], ['strategic', 'Stratégique (J-1)']]
 
+const SHORT = {
+  "Retard de l'avion entrant": 'Avion entrant', 'Météo au départ': 'Météo départ',
+  "Météo à l'arrivée (régulation ATFM)": 'Météo arrivée', 'Congestion aéroport / ATC': 'Congestion ATC',
+  'Historique de la ligne': 'Historique ligne', 'Marge de rotation': 'Marge rotation', 'Calendrier / horaire': 'Calendrier',
+}
+const riskColor = (p) => (p >= 0.7 ? 'var(--critical)' : p >= 0.4 ? 'var(--serious)' : p >= 0.2 ? 'var(--warning)' : 'var(--axis)')
+
 function ProbCell({ p }) {
-  const color = p >= 0.7 ? 'var(--critical)' : p >= 0.4 ? 'var(--serious)' : 'var(--s1)'
-  return <><span className="probbar"><i style={{ width: `${(p ?? 0) * 100}%`, background: color }} /></span>{fmt.pct(p, 0)}</>
+  const color = riskColor(p)
+  return <span className="strip-time" style={{ fontWeight: 600 }}><i className="dot" style={{ background: color, marginRight: 6, verticalAlign: 'middle' }} />{fmt.pct(p, 0)}</span>
 }
 
 function Explain({ flight, model, onSimulate }) {
@@ -73,21 +80,22 @@ export default function RiskBoard({ date, meta, onSimulate }) {
         {stats && <span className="badge">{stats.high} vols à risque élevé (≥ 70 %) · {stats.hits}/{stats.flagged} alertes confirmées</span>}
       </div>
       {!rows ? <div className="empty">Chargement…</div> : (
-        <div className="grid g32" style={{ alignItems: 'start' }}>
-          <div className="card" style={{ maxHeight: 760, overflow: 'auto', padding: 0 }}>
-            <table>
-              <thead style={{ position: 'sticky', top: 0, background: 'var(--surface)' }}><tr>
-                <th>Vol</th><th>Ligne</th><th>Départ</th><th>Risque</th><th className="num">Prédit</th><th>Facteur principal</th><th className="num">Réalisé</th>
+        <div className="grid risk-grid" style={{ alignItems: 'start' }}>
+          <div className="card strip-panel">
+            <table className="strips">
+              <thead><tr>
+                <th>Vol</th><th>Ligne</th><th>Départ</th><th>Risque</th><th className="num">Prédit</th><th>Cause principale</th><th className="num">Réalisé</th>
               </tr></thead>
               <tbody>{rows.map((r) => {
                 const st = delayStatus(r.dep_delay)
                 return (
-                  <tr key={r.flight_id} className={`click ${sel?.flight_id === r.flight_id ? 'sel' : ''}`} onClick={() => setSel(r)}>
-                    <td><b>{r.flight_number}</b><div style={{ fontSize: 11, color: 'var(--muted)' }}>{r.tail_number}</div></td>
-                    <td>{r.origin} → {r.dest}</td><td>{fmt.time(r.sched_dep)}</td>
+                  <tr key={r.flight_id} className={`click ${sel?.flight_id === r.flight_id ? 'sel' : ''}`} onClick={() => setSel(r)}
+                    style={{ '--risk': riskColor(r.prob_delay15) }} tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && setSel(r)}>
+                    <td><div className="strip-flight">{r.flight_number}</div><div className="strip-tail">{r.tail_number}</div></td>
+                    <td className="strip-route">{r.origin} → {r.dest}</td><td className="strip-time">{fmt.time(r.sched_dep)}</td>
                     <td style={{ whiteSpace: 'nowrap' }}><ProbCell p={r.prob_delay15} /></td>
                     <td className="num">{fmt.min(r.pred_delay_min)}</td>
-                    <td style={{ fontSize: 12 }}>{r.top_factor}</td>
+                    <td style={{ fontSize: 14, whiteSpace: 'nowrap' }} title={r.top_factor}>{SHORT[r.top_factor] ?? r.top_factor}</td>
                     <td className="num"><span className="badge" title={st.label}><i className="dot" style={{ background: st.color }} />{fmt.min(r.dep_delay)}</span></td>
                   </tr>
                 )

@@ -49,13 +49,13 @@ export default function Simulator({ date, target }) {
 
       {res && (
         <>
-          <div className="grid" style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', marginBottom: 16 }}>
+          <div className="grid scen-grid">
             {res.scenarios.map((s) => (
               <div key={s.key} className={`scen ${s.key === res.recommended ? 'best' : ''} ${s.key === sel ? 'sel' : ''} ${s.feasible ? '' : 'off'}`}
                 onClick={() => s.feasible && setSel(s.key)}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6 }}>
-                  <b style={{ fontSize: 13 }}>{s.label}</b>
-                  {s.key === res.recommended && <span className="badge" style={{ background: '#e3f5e3' }}>✓ Recommandé</span>}
+                <div className="scen-head">
+                  {s.key === res.recommended && <span className="scen-reco">✓ Recommandé</span>}
+                  <b>{s.label}</b>
                 </div>
                 {s.feasible ? <>
                   <div className="cost">{fmt.eur(s.total_cost)}</div>
@@ -75,7 +75,7 @@ export default function Simulator({ date, target }) {
                 <h3>{scen.label}</h3>
                 <p className="hint">{scen.description}</p>
                 <CascadeChart base={base} scen={scen} />
-                <table style={{ marginTop: 12 }}>
+                <table className="nowrap" style={{ marginTop: 12 }}>
                   <thead><tr><th>Vol</th><th>Ligne</th><th>Avion</th><th>Départ prévu</th><th className="num">Retard départ</th><th className="num">Retard arrivée</th><th>Statut</th></tr></thead>
                   <tbody>{scen.legs.map((l) => {
                     const st = l.status === 'cancelled' ? { color: 'var(--critical)', label: 'Annulé' } : delayStatus(l.arr_delay)
