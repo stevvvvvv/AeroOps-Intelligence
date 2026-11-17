@@ -1,0 +1,63 @@
+name: pages
+
+# Démo statique gratuite sur GitHub Pages :
+# le pipeline tourne ici, les réponses de l'API sont exportées en JSON,
+# le simulateur JS est vérifié contre Python, puis le front compilé est publié.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Pipeline (données, entraînement, scoring)
+        run: |
+          pip install -r requirements.txt
+          python -m aeroops.cli demo
+
+      - name: Export des données de la démo
+        run: python scripts/export_static.py frontend/public/data --reference sim_reference.json
+
+      - name: Vérifier le simulateur JS contre Python
+        working-directory: frontend
+        run: |
+          npm install
+          node src/sim/simulation.test.mjs public/data ../sim_reference.json
+
+      - name: Build du front statique
+        working-directory: frontend
+        run: VITE_STATIC=1 npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
