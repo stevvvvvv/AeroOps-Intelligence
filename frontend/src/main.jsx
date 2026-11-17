@@ -1,7 +1,7 @@
 import { StrictMode, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import './styles.css'
-import { api } from './api'
+import { api, STATIC } from './api'
 import Dashboard from './components/Dashboard'
 import RiskBoard from './components/RiskBoard'
 import Rotations from './components/Rotations'
@@ -29,13 +29,14 @@ function App() {
 
   const openSim = (flight_id, delay) => { setSimTarget({ flight_id, delay: Math.max(15, Math.round(delay || 45)) }); setTab('sim') }
 
-  if (error) return <div className="empty">API injoignable ({error}). Lancer : <code>uvicorn aeroops.api.main:app</code></div>
+  if (error) return <div className="empty">{STATIC ? `Données de démo introuvables (${error})` : <>API injoignable ({error}). Lancer : <code>uvicorn aeroops.api.main:app</code></>}</div>
   if (!meta) return <div className="empty">Chargement…</div>
 
   return (
     <>
       <header className="topbar">
         <div className="brand">AeroOps Intelligence<span>Supervision des opérations</span></div>
+        {STATIC && <span className="badge" title="Données de démonstration pré-calculées ; la simulation est recalculée dans le navigateur">Démo statique</span>}
         <nav className="tabs">
           {TABS.map(([k, l]) => <button key={k} className={`tab ${tab === k ? 'active' : ''}`} onClick={() => setTab(k)}>{l}</button>)}
         </nav>

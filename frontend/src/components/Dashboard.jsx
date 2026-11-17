@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { api, fmt } from '../api'
+import { api, fmt, STATIC } from '../api'
 
 // Causes de retard : ordre catégoriel fixe (validé daltonisme en barres empilées adjacentes)
 const CAUSES = [
@@ -37,8 +37,8 @@ export default function Dashboard({ meta }) {
       <p className="sub">Ponctualité, causes de retard et points de congestion du réseau.</p>
       <div className="filters">
         <div className="seg">{presets.map(([l, s]) => <button key={l} className={range[0] === s ? 'on' : ''} onClick={() => setRange([s, meta.end])}>{l}</button>)}</div>
-        <label>Du<input type="date" value={range[0]} min={meta.start} max={range[1]} onChange={(e) => setRange([e.target.value, range[1]])} /></label>
-        <label>Au<input type="date" value={range[1]} min={range[0]} max={meta.end} onChange={(e) => setRange([range[0], e.target.value])} /></label>
+        {!STATIC && <><label>Du<input type="date" value={range[0]} min={meta.start} max={range[1]} onChange={(e) => setRange([e.target.value, range[1]])} /></label>
+        <label>Au<input type="date" value={range[1]} min={range[0]} max={meta.end} onChange={(e) => setRange([range[0], e.target.value])} /></label></>}
       </div>
 
       <div className="grid g4" style={{ marginBottom: 16 }}>

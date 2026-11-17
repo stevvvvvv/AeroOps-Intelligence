@@ -8,3 +8,4 @@ frontend/dist/
 .env
 .pytest_cache/
 src/*.egg-info/
+frontend/public/data/

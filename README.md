@@ -3,7 +3,7 @@
 **Prédiction des retards et aide à la décision pour un centre de contrôle des opérations aériennes (OCC).**
 
 [![ci](https://github.com/stevvvvvv/AeroOps-Intelligence/actions/workflows/ci.yml/badge.svg)](https://github.com/stevvvvvv/AeroOps-Intelligence/actions/workflows/ci.yml)
-**Démo en ligne : [huggingface.co/spaces/Steevv/aeroops-intelligence](https://huggingface.co/spaces/Steevv/aeroops-intelligence)** (données de démonstration générées, voir plus bas)
+**Démo en ligne : [huggingface.co/spaces/Steevv/aeroops-intelligence](https://huggingface.co/spaces/Steevv/aeroops-intelligence)** (version statique, données de démonstration générées)
 
 Un vol risque de partir avec 45 minutes de retard. La plateforme estime ce retard, explique d'où il vient (avion entrant en retard, orage au départ, régulation ATFM à l'arrivée…), calcule son effet sur les vols suivants du même avion, puis compare cinq décisions possibles et recommande la moins coûteuse.
 
@@ -89,6 +89,9 @@ Chaque variable doit être connue au moment de la prédiction (`src/aeroops/feat
 ### Coûts des scénarios (`src/aeroops/config.py`)
 100 €/min de retard, indemnités **EU261** (250/400/600 € par passager selon la distance au-delà de 3 h de retard ou en cas d'annulation), 150 €/passager annulé, 12 000 € pour un avion de réserve, 1 500 € par demi-tour accéléré, 2 000 € par échange d'avion, pénalité de couvre-feu à Orly (23h30). Toutes ces hypothèses sont modifiables.
 
+### Démo en ligne (site statique)
+La démo Hugging Face est un site statique, sans serveur Python. À chaque push sur `main`, GitHub Actions entraîne le modèle, puis `scripts/export_static.py` pré-calcule en JSON toutes les réponses de l'API : KPI, prédictions, explications SHAP, rotations. La simulation de scénarios, elle, est recalculée dans le navigateur par un port JavaScript du moteur Python (`frontend/src/sim/simulation.js`). Avant chaque publication, le workflow vérifie que ce port donne exactement les mêmes résultats que Python. Seule différence avec la version complète : le dashboard propose trois périodes fixes au lieu d'un choix de dates libre.
+
 ### Limites connues
 - Légalité des équipages (FTL) et correspondances passagers non modélisées : un vrai OCC vérifie les deux avant un échange d'avion.
 - Les scénarios sont évalués un par un (heuristique), pas par optimisation globale du réseau (programmation linéaire en nombres entiers : piste d'amélioration naturelle).
@@ -107,8 +110,9 @@ src/aeroops/
 sql/           schema.sql · kpis.sql
 airflow/dags/  aeroops_pipeline.py
 frontend/      React + Vite + Recharts
-deploy/        Dockerfile.space (démo Hugging Face)
-.github/       CI (tests + build) et déploiement automatique du Space
+scripts/       export_static.py (démo statique)
+deploy/        README du Space Hugging Face
+.github/       CI (tests + build) et déploiement automatique de la démo
 tests/         propagation, anti-fuite, API de bout en bout
 docs/          architecture.md (diagrammes Mermaid) · screenshots/
 ```

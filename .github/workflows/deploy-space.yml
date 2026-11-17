@@ -1,5 +1,9 @@
 name: deploy-space
 
+# Démo statique gratuite sur Hugging Face (sdk: static) :
+# le pipeline tourne ici, les réponses de l'API sont exportées en JSON,
+# puis seul le site compilé est publié sur le Space.
+
 on:
   push:
     branches: [main]
@@ -14,17 +18,34 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install huggingface_hub
-      - name: Préparer le contenu du Space
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Pipeline (données, entraînement, scoring)
+        run: |
+          pip install -r requirements.txt huggingface_hub
+          python -m aeroops.cli demo
+
+      - name: Export des données de la démo
+        run: python scripts/export_static.py frontend/public/data --reference sim_reference.json
+
+      - name: Vérifier le simulateur JS contre Python
+        working-directory: frontend
+        run: |
+          npm install
+          node src/sim/simulation.test.mjs public/data ../sim_reference.json
+
+      - name: Build du front statique
+        working-directory: frontend
+        run: VITE_STATIC=1 npm run build
+
+      - name: Préparer le Space
         run: |
           mkdir staging
-          rsync -a --exclude .git --exclude .github --exclude data --exclude models \
-            --exclude frontend/node_modules --exclude frontend/dist ./ staging/
-          cp deploy/Dockerfile.space staging/Dockerfile
-          {
-            printf -- '---\ntitle: AeroOps Intelligence\nemoji: "✈️"\ncolorFrom: blue\ncolorTo: gray\nsdk: docker\napp_port: 7860\npinned: false\nshort_description: Prédiction des retards aériens et simulation OCC\n---\n\n'
-            cat README.md
-          } > staging/README.md
+          cp -r frontend/dist/. staging/
+          cp deploy/space_README.md staging/README.md
+
       - name: Publier sur Hugging Face
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
@@ -35,7 +56,7 @@ jobs:
           from huggingface_hub import HfApi
           api = HfApi(token=os.environ["HF_TOKEN"])
           space = os.environ["HF_SPACE"]
-          api.create_repo(space, repo_type="space", space_sdk="docker", exist_ok=True)
+          api.create_repo(space, repo_type="space", space_sdk="static", exist_ok=True)
           api.upload_folder(folder_path="staging", repo_id=space, repo_type="space",
                             commit_message=f"Deploy {os.environ.get('GITHUB_SHA', '')[:7]}",
                             delete_patterns=["*"])
